@@ -18,8 +18,8 @@ This project uses `uv` for fast dependency management.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/doc-scraper.git](https://github.com/your-username/doc-scraper.git)
-    cd doc-scraper
+    git clone https://github.com/basta/docuscraper.git
+    cd docuscraper
     ```
 
 2.  **Create and activate a virtual environment:**
