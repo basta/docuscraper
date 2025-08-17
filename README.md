@@ -1,6 +1,6 @@
 # DocuScraper 📄
 
-A fast, asynchronous command-line tool to crawl and scrape documentation websites, consolidating all content into a single text file. Ideal for creating context files for LLMs or for offline reading.
+A fast, asynchronous command-line tool to crawl and scrape documentation websites, consolidating all content into a single text file. Ideal for creating context files for LLMs.
 
 ---
 
@@ -9,7 +9,6 @@ A fast, asynchronous command-line tool to crawl and scrape documentation website
 -   🚀 **Asynchronous by Design**: Uses `aiohttp` to crawl and scrape multiple pages concurrently for maximum speed.
 -   🎯 **Precise Content Extraction**: Leverages CSS selectors to target the exact content you need, ignoring navigation, sidebars, and footers.
 -   🔎 **Wildcard URL Filtering**: Easily restrict the crawl to specific sections of a site (e.g., `/docs/*`) to get only the relevant pages.
--   📦 **Modern & Modular**: Built with Typer and a decoupled engine, making it easy to use and extend.
 
 ---
 
@@ -19,8 +18,8 @@ This project uses `uv` for fast dependency management.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/your-username/doc-scraper.git](https://github.com/your-username/doc-scraper.git)
-    cd doc-scraper
+    git clone https://github.com/basta/docuscraper.git
+    cd docuscraper
     ```
 
 2.  **Create and activate a virtual environment:**
