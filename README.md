@@ -1,6 +1,6 @@
 # DocuScraper 📄
 
-A fast, asynchronous command-line tool to crawl and scrape documentation websites, consolidating all content into a single text file. Ideal for creating context files for LLMs or for offline reading.
+A fast, asynchronous command-line tool to crawl and scrape documentation websites, consolidating all content into a single text file. Ideal for creating context files for LLMs.
 
 ---
 
