@@ -9,7 +9,6 @@ A fast, asynchronous command-line tool to crawl and scrape documentation website
 -   🚀 **Asynchronous by Design**: Uses `aiohttp` to crawl and scrape multiple pages concurrently for maximum speed.
 -   🎯 **Precise Content Extraction**: Leverages CSS selectors to target the exact content you need, ignoring navigation, sidebars, and footers.
 -   🔎 **Wildcard URL Filtering**: Easily restrict the crawl to specific sections of a site (e.g., `/docs/*`) to get only the relevant pages.
--   📦 **Modern & Modular**: Built with Typer and a decoupled engine, making it easy to use and extend.
 
 ---
 
