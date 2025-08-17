@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "doc-scraper"
+name = "docuscraper"
 version = "0.1.0"
 description = "A CLI tool to crawl and scrape documentation websites into a single text file."
 authors = [
-    { name = "Your Name", email = "you@example.com" },
+    { name = "Ondřej Baštař", email = "jsembasta@gmail.com" },
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-doc-scraper = "cli.main:app"
+docuscraper = "cli.main:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["doc_scraper_engine", "cli"]
