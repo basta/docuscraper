@@ -31,15 +31,16 @@ def scrape(
             Optional[Path], typer.Option("--output-file", "-o", help="Path to save the final text file.")] = None,
         url_filter: Annotated[Optional[str], typer.Option("--filter", "-f",
                                                           help="Wildcard pattern to filter URLs (e.g., 'https://site.com/docs/*').")] = None,
+        max_pages: Annotated[int, typer.Option("--max-pages", "-p", help="Maximum number of pages to scrape.")] = 100
 ):
     """
     Crawl a documentation website and scrape its content into a single file.
     """
-    typer.echo(f"🚀 Starting scrape for {start_url}")
+    typer.echo(f"🚀 Starting scrape for {start_url} (limit: {max_pages} pages)")
     if url_filter:
         typer.echo(f"Filtering URLs with pattern: {url_filter}")
 
-    engine = ScrapingEngine(start_url=start_url, selector=selector, url_filter=url_filter)
+    engine = ScrapingEngine(start_url=start_url, selector=selector, url_filter=url_filter, max_pages=max_pages)
 
     try:
         final_text = run_async(engine.run())

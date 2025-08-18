@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  docuscraper-app:
+    build: .
+    container_name: docuscraper
+    restart: unless-stopped
+    labels:
+      # --- Traefik Configuration ---
+      - "traefik.enable=true"
+      - "traefik.http.routers.docuscraper.rule=Host(`scraper.basta.one`)" # 👈 Change to your desired domain
+      - "traefik.http.routers.docuscraper.entrypoints=websecure"
+      - "traefik.http.routers.docuscraper.tls.certresolver=teeresolver" # 👈 Your cert resolver
+      - "traefik.http.routers.docuscraper.tls=true"
+      - "traefik.http.services.docuscraper.loadbalancer.server.port=8000" # 👈 Match the container port

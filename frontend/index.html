@@ -55,6 +55,7 @@
             <div id="resultContainer" class="mt-8 pt-6 border-t border-gray-200 hidden">
                  <div class="flex justify-between items-center mb-2">
                     <h2 class="text-2xl font-semibold">Scraped Content</h2>
+                    <p id="tokenEstimate" class="text-sm text-gray-600 font-medium"></p>
                     <button id="copyButton" class="px-4 py-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-md">Copy to Clipboard</button>
                 </div>
                 <textarea id="resultText" readonly class="w-full h-96 p-3 mt-2 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm"></textarea>
@@ -75,6 +76,7 @@
         const errorContainer = document.getElementById('errorContainer');
         const errorMessage = document.getElementById('errorMessage');
         const copyButton = document.getElementById('copyButton');
+        const tokenEstimateEl = document.getElementById('tokenEstimate');
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -85,6 +87,7 @@
             submitButton.disabled = true;
             buttonText.textContent = 'Scraping...';
             loader.classList.remove('hidden');
+            tokenEstimateEl.innerHTML = '';
 
             const formData = new FormData(form);
             const data = {
@@ -94,7 +97,7 @@
             };
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/scrape', {
+                const response = await fetch('/scrape', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -110,6 +113,10 @@
 
                 const result = await response.json();
                 resultText.value = result.content;
+
+                const tokenEstimate = Math.floor(result.content.length / 4);
+                tokenEstimateEl.innerHTML = `<strong>Token Estimate:</strong> ~${tokenEstimate.toLocaleString()} tokens`;
+
                 resultContainer.classList.remove('hidden');
 
             } catch (error) {

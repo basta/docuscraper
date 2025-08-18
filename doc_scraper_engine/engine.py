@@ -10,7 +10,7 @@ class ScrapingEngine:
     Orchestrates the crawling, scraping, and processing workflow.
     """
 
-    def __init__(self, start_url: str, selector: str, url_filter: Optional[str] = None):
+    def __init__(self, start_url: str, selector: str, url_filter: Optional[str] = None, max_pages: int = 50):
         """
         Initializes the engine with the necessary configuration.
 
@@ -21,7 +21,7 @@ class ScrapingEngine:
         """
         self.start_url = start_url
         self.selector = selector
-        self.crawler = Crawler(start_url, url_filter=url_filter)
+        self.crawler = Crawler(start_url, url_filter=url_filter, max_pages=max_pages)
         self.scraper = Scraper(selector)
         self.processor = Processor()
 

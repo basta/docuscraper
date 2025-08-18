@@ -6,6 +6,8 @@ from urllib.parse import urljoin, urlparse
 import aiohttp
 from bs4 import BeautifulSoup
 
+import socket
+import ipaddress
 
 class Crawler:
     """
@@ -13,13 +15,42 @@ class Crawler:
     using a producer-consumer pattern.
     """
 
-    def __init__(self, start_url: str, url_filter: Optional[str] = None, max_concurrent_requests: int = 10):
+    def __init__(self, start_url: str, url_filter: Optional[str] = None, max_concurrent_requests: int = 10, max_pages: int = 50):
         self.start_url = start_url
         self.base_domain = urlparse(start_url).netloc
         self.url_filter = url_filter
         self.queue = asyncio.Queue()
         self.visited_urls: Set[str] = set()
         self.max_concurrent_requests = max_concurrent_requests
+        self.max_pages = max_pages
+
+    async def _is_safe_url(self, url: str) -> bool:
+        """
+        Resolves the URL's hostname to an IP and checks if it's a private address.
+        """
+        try:
+            hostname = urlparse(url).hostname
+            if not hostname:
+                return False
+
+            # Run blocking DNS lookup in a thread pool
+            loop = asyncio.get_event_loop()
+            ip_str = await loop.run_in_executor(None, socket.gethostbyname, hostname)
+
+            ip = ipaddress.ip_address(ip_str)
+
+            # Check against all private/reserved ranges
+            if ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local:
+                print(f"Skipping unsafe URL (private IP): {url}")
+                return False
+
+            return True
+        except socket.gaierror:
+            print(f"Could not resolve hostname for: {url}")
+            return False
+        except Exception as e:
+            print(f"Error validating URL {url}: {e}")
+            return False
 
     async def crawl(self) -> List[str]:
         """
@@ -58,6 +89,10 @@ class Crawler:
                     self.queue.task_done()
                     continue
 
+                if not await self._is_safe_url(url):
+                    self.queue.task_done()
+                    continue
+
                 # Log which URL is being processed
                 print(f"Processing: {url}")
                 self.visited_urls.add(url)
@@ -76,6 +111,8 @@ class Crawler:
         Fetches a single URL, parses its content for new links,
         and adds them back to the queue for the workers to process.
         """
+        if len(self.visited_urls) >= self.max_pages:
+            return
         try:
             async with session.get(url, timeout=10) as response:
                 # Log the result of the fetch attempt
@@ -86,6 +123,10 @@ class Crawler:
 
                     # Find links and add them to the queue
                     for a_tag in soup.find_all("a", href=True):
+                        if len(self.visited_urls) >= self.max_pages:
+                            print(f"Page limit of {self.max_pages} reached. Halting crawl.")
+                            break
+
                         href = a_tag["href"]
                         full_url = urljoin(url, href)
                         parsed_url = urlparse(full_url)

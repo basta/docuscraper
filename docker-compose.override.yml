@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  docuscraper-app:
+    # 1. Override the command to enable live-reloading
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+    # 2. Add volumes to sync your local code into the container
+    volumes:
+      - ./api:/app/api
+      - ./doc_scraper_engine:/app/doc_scraper_engine
+      - ./frontend:/app/frontend
+
+    # 3. Expose the port directly for local access
+    ports:
+      - "8000:8000"
