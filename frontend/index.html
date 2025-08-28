@@ -52,6 +52,11 @@
                 </div>
             </form>
 
+            <div id="progressContainer" class="mt-8 pt-6 border-t border-gray-200 hidden">
+                <h2 class="text-2xl font-semibold mb-2">Progress Log</h2>
+                <div id="progressLog" class="w-full h-48 p-3 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm overflow-y-auto"></div>
+            </div>
+
             <div id="resultContainer" class="mt-8 pt-6 border-t border-gray-200 hidden">
                  <div class="flex justify-between items-center mb-2">
                     <h2 class="text-2xl font-semibold">Scraped Content</h2>
@@ -67,84 +72,138 @@
     </div>
 
     <script>
-        const form = document.getElementById('scrapeForm');
-        const submitButton = document.getElementById('submitButton');
-        const buttonText = document.getElementById('buttonText');
-        const loader = document.getElementById('loader');
-        const resultContainer = document.getElementById('resultContainer');
-        const resultText = document.getElementById('resultText');
-        const errorContainer = document.getElementById('errorContainer');
-        const errorMessage = document.getElementById('errorMessage');
-        const copyButton = document.getElementById('copyButton');
-        const tokenEstimateEl = document.getElementById('tokenEstimate');
+            const form = document.getElementById('scrapeForm');
+            const submitButton = document.getElementById('submitButton');
+            const buttonText = document.getElementById('buttonText');
+            const loader = document.getElementById('loader');
 
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+            const progressContainer = document.getElementById('progressContainer');
+            const progressLog = document.getElementById('progressLog');
 
-            // Reset UI state
-            resultContainer.classList.add('hidden');
-            errorContainer.classList.add('hidden');
-            submitButton.disabled = true;
-            buttonText.textContent = 'Scraping...';
-            loader.classList.remove('hidden');
-            tokenEstimateEl.innerHTML = '';
+            const resultContainer = document.getElementById('resultContainer');
+            const resultText = document.getElementById('resultText');
+            const errorContainer = document.getElementById('errorContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            const copyButton = document.getElementById('copyButton');
+            const tokenEstimateEl = document.getElementById('tokenEstimate');
 
-            const formData = new FormData(form);
-            const data = {
-                start_url: formData.get('start_url'),
-                selector: formData.get('selector'),
-                url_filter: formData.get('url_filter') || null,
+            let eventSource = null;
+
+            const addLog = (message, type = 'info') => {
+                const p = document.createElement('p');
+                p.textContent = message;
+                if (type === 'url') {
+                    p.classList.add('text-green-600', 'truncate');
+                }
+                progressLog.appendChild(p);
+                progressLog.scrollTop = progressLog.scrollHeight;
             };
 
-            try {
-                const response = await fetch('/scrape', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'accept': 'application/json'
-                    },
-                    body: JSON.stringify(data),
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `HTTP error! Status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                resultText.value = result.content;
-
-                const tokenEstimate = Math.floor(result.content.length / 4);
-                tokenEstimateEl.innerHTML = `<strong>Token Estimate:</strong> ~${tokenEstimate.toLocaleString()} tokens`;
-
-                resultContainer.classList.remove('hidden');
-
-            } catch (error) {
-                errorMessage.textContent = `An error occurred: ${error.message}`;
-                errorContainer.classList.remove('hidden');
-            } finally {
-                // Restore button state
+            const restoreButtonState = () => {
                 submitButton.disabled = false;
                 buttonText.textContent = 'Scrape';
                 loader.classList.add('hidden');
-            }
-        });
+            };
 
-        copyButton.addEventListener('click', () => {
-            resultText.select();
-            // Use execCommand as a fallback for clipboard API in secure contexts
-            try {
-                document.execCommand('copy');
-                copyButton.textContent = 'Copied!';
-                setTimeout(() => {
-                    copyButton.textContent = 'Copy to Clipboard';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text: ', err);
-                alert('Failed to copy text.');
-            }
-        });
-    </script>
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
 
+                // Reset UI state
+                progressContainer.classList.add('hidden');
+                resultContainer.classList.add('hidden');
+                errorContainer.classList.add('hidden');
+                progressLog.innerHTML = '';
+                tokenEstimateEl.innerHTML = '';
+                submitButton.disabled = true;
+                buttonText.textContent = 'Scraping...';
+                loader.classList.remove('hidden');
+
+                if (eventSource) {
+                    eventSource.close();
+                }
+
+                const formData = new FormData(form);
+                const data = {
+                    start_url: formData.get('start_url'),
+                    selector: formData.get('selector'),
+                    url_filter: formData.get('url_filter') || null,
+                };
+
+                try {
+                    // Step 1: Start the job
+                    const startResponse = await fetch('/scrape', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+
+                    if (!startResponse.ok) {
+                        const errorData = await startResponse.json();
+                        throw new Error(errorData.detail || `HTTP error! Status: ${startResponse.status}`);
+                    }
+
+                    const { job_id } = await startResponse.json();
+
+                    // Step 2: Connect to the SSE stream
+                    progressContainer.classList.remove('hidden');
+                    addLog('Job started. Waiting for progress updates...');
+
+                    eventSource = new EventSource(`/scrape/stream/${job_id}`);
+
+                    eventSource.onmessage = (e) => {
+                        const msg = JSON.parse(e.data);
+
+                        switch (msg.type) {
+                            case 'progress':
+                                addLog(`[INFO] ${msg.message}`);
+                                break;
+                            case 'page_crawled':
+                                addLog(`Found: ${msg.url}`, 'url');
+                                break;
+                            case 'error':
+                                errorMessage.textContent = `An error occurred: ${msg.message}`;
+                                errorContainer.classList.remove('hidden');
+                                eventSource.close();
+                                restoreButtonState();
+                                break;
+                            case 'complete':
+                                addLog('✅ Scraping complete!');
+                                resultText.value = msg.content;
+                                const tokenEstimate = Math.floor(msg.content.length / 4);
+                                tokenEstimateEl.innerHTML = `<strong>Token Estimate:</strong> ~${tokenEstimate.toLocaleString()} tokens`;
+                                resultContainer.classList.remove('hidden');
+                                eventSource.close();
+                                restoreButtonState();
+                                break;
+                        }
+                    };
+
+                    eventSource.onerror = (err) => {
+                        console.error("EventSource failed:", err);
+                        addLog('❌ Connection to server lost.', 'error');
+                        eventSource.close();
+                        restoreButtonState();
+                    };
+
+                } catch (error) {
+                    errorMessage.textContent = `An error occurred: ${error.message}`;
+                    errorContainer.classList.remove('hidden');
+                    if(eventSource) eventSource.close();
+                    restoreButtonState();
+                }
+            });
+
+            copyButton.addEventListener('click', () => {
+                resultText.select();
+                try {
+                    document.execCommand('copy');
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => { copyButton.textContent = 'Copy to Clipboard'; }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    alert('Failed to copy text.');
+                }
+            });
+        </script>
 </body>
 </html>

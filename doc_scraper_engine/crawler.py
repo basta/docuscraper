@@ -9,6 +9,8 @@ from bs4 import BeautifulSoup
 import socket
 import ipaddress
 
+import json
+
 class Crawler:
     """
     Asynchronously crawls a website to find all unique, in-domain URLs
@@ -23,6 +25,7 @@ class Crawler:
         self.visited_urls: Set[str] = set()
         self.max_concurrent_requests = max_concurrent_requests
         self.max_pages = max_pages
+        self.progress_queue: Optional[asyncio.Queue] = None
 
     async def _is_safe_url(self, url: str) -> bool:
         """
@@ -52,11 +55,11 @@ class Crawler:
             print(f"Error validating URL {url}: {e}")
             return False
 
-    async def crawl(self) -> List[str]:
+    async def crawl(self, progress_queue) -> List[str]:
         """
         Starts the crawling process and returns a list of all found URLs.
         """
-        # The queue is the central point for tasks (URLs to process)
+        self.progress_queue = progress_queue
         self.queue.put_nowait(self.start_url)
 
         async with aiohttp.ClientSession() as session:
@@ -93,9 +96,13 @@ class Crawler:
                     self.queue.task_done()
                     continue
 
-                # Log which URL is being processed
                 print(f"Processing: {url}")
                 self.visited_urls.add(url)
+
+                if self.progress_queue:
+                    msg = json.dumps({"type": "page_crawled", "url": url})
+                    await self.progress_queue.put(msg)
+
                 await self._fetch_and_find_links(url, session)
 
                 # Signal that this task from the queue is done
