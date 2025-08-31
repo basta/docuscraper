@@ -5,6 +5,8 @@ services:
     build: .
     container_name: docuscraper
     restart: unless-stopped
+    volumes:
+      - ./history:/app/history
     labels:
       # --- Traefik Configuration ---
       - "traefik.enable=true"

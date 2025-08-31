@@ -19,6 +19,7 @@ dependencies = [
     "fastapi>=0.111.0",
     "uvicorn[standard]>=0.29.0",
     "slowapi>=0.1.9",
+    "aiofiles>=24.1.0",
 ]
 
 [project.scripts]

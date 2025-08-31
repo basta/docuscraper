@@ -69,6 +69,11 @@
                 <p id="errorMessage"></p>
             </div>
         </main>
+        <div id="historyContainer" class="mt-8 pt-6 border-t border-gray-200 hidden">
+            <h2 class="text-2xl font-semibold mb-2">Scrape History</h2>
+            <ul id="historyList" class="space-y-2">
+                </ul>
+        </div>
     </div>
 
     <script>
@@ -88,6 +93,9 @@
             const tokenEstimateEl = document.getElementById('tokenEstimate');
 
             let eventSource = null;
+
+            const historyContainer = document.getElementById('historyContainer');
+            const historyList = document.getElementById('historyList');
 
             const addLog = (message, type = 'info') => {
                 const p = document.createElement('p');
@@ -174,6 +182,7 @@
                                 resultContainer.classList.remove('hidden');
                                 eventSource.close();
                                 restoreButtonState();
+                                loadHistory();
                                 break;
                         }
                     };
@@ -204,6 +213,76 @@
                     alert('Failed to copy text.');
                 }
             });
+
+            const loadHistory = async () => {
+                try {
+                    const response = await fetch('/history');
+                    if (!response.ok) return;
+
+                    const history = await response.json();
+                    historyList.innerHTML = ''; // Clear existing list
+
+                    if (history.length > 0) {
+                        historyContainer.classList.remove('hidden');
+                        history.forEach(item => {
+                            const li = document.createElement('li');
+                            li.className = 'p-3 bg-gray-50 border rounded-md hover:bg-gray-100 cursor-pointer';
+                            li.dataset.jobId = item.job_id;
+
+                            const url = new URL(item.start_url);
+                            const formattedDate = new Date(item.timestamp * 1000).toLocaleString();
+
+                            li.innerHTML = `
+                                <div class="flex justify-between items-center">
+                                    <div class="font-mono text-sm truncate pr-4">
+                                        <strong class="font-semibold text-indigo-600">${url.hostname}</strong>
+                                        <span class="text-gray-500">${item.selector}</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 text-right whitespace-nowrap">${formattedDate}</div>
+                                </div>
+                            `;
+                            historyList.appendChild(li);
+                        });
+                    } else {
+                        historyContainer.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Failed to load history:', error);
+                }
+            };
+
+            // New event listener for clicking history items
+            historyList.addEventListener('click', async (event) => {
+                const item = event.target.closest('li');
+                if (!item || !item.dataset.jobId) return;
+
+                const { jobId } = item.dataset;
+                try {
+                    const response = await fetch(`/history/${jobId}`);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch content for job ${jobId}`);
+                    }
+                    const content = await response.text();
+
+                    // Display the fetched content
+                    resultText.value = content;
+                    const tokenEstimate = Math.floor(content.length / 4);
+                    tokenEstimateEl.innerHTML = `<strong>Token Estimate:</strong> ~${tokenEstimate.toLocaleString()} tokens`;
+                    resultContainer.classList.remove('hidden');
+                    progressContainer.classList.add('hidden');
+                    errorContainer.classList.add('hidden');
+
+                    // Scroll to the result
+                    resultContainer.scrollIntoView({ behavior: 'smooth' });
+
+                } catch (error) {
+                    errorMessage.textContent = `An error occurred: ${error.message}`;
+                    errorContainer.classList.remove('hidden');
+                }
+            });
+
+            // Call loadHistory on page load
+            document.addEventListener('DOMContentLoaded', loadHistory);
         </script>
 </body>
 </html>

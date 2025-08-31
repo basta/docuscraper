@@ -103,6 +103,38 @@ class ScrapeRequest(BaseModel):
     selector: str
     url_filter: Optional[str] = None
 
+import aiofiles
+from fastapi.responses import PlainTextResponse
+
+HISTORY_DIR = Path(__file__).resolve().parents[1] / "history"
+
+@app.get("/history", response_model=list)
+async def get_history():
+    """
+Returns a list of past scrape jobs from the history index.
+    """
+    index_file = HISTORY_DIR / "index.json"
+    if not index_file.exists():
+        return []
+    try:
+        async with aiofiles.open(index_file, "r", encoding="utf-8") as f:
+            content = await f.read()
+            return json.loads(content)
+    except (IOError, json.JSONDecodeError):
+        return []
+
+@app.get("/history/{job_id}", response_class=PlainTextResponse)
+async def get_history_content(job_id: str):
+    """
+Returns the saved text content for a given job_id.
+    """
+    content_file = HISTORY_DIR / f"{job_id}.txt"
+    if not content_file.exists():
+        raise HTTPException(status_code=404, detail="Scrape result not found.")
+
+    async with aiofiles.open(content_file, "r", encoding="utf-8") as f:
+        return await f.read()
+
 
 @app.post("/scrape", response_model=dict)
 @limiter.limit("5/minute")

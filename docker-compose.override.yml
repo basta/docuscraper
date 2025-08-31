@@ -10,7 +10,8 @@ services:
       - ./api:/app/api
       - ./doc_scraper_engine:/app/doc_scraper_engine
       - ./frontend:/app/frontend
-
+      - ./history:/app/history
+    
     # 3. Expose the port directly for local access
     ports:
       - "8000:8000"
